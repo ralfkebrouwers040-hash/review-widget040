@@ -3,6 +3,8 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 const API_KEY = process.env.GOOGLE_API_KEY;
+// De ID waarvan we weten dat hij werkt:
+const PLACE_ID = 'ChIJ4boUAQBDZIMR4LQpPG4yjSo';
 
 app.get('/', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
@@ -10,31 +12,30 @@ app.get('/', async (req, res) => {
   if (!API_KEY) return res.send("Fout: Geen API_KEY gevonden.");
 
   try {
-    // STAP 1: Zoek het bedrijf op naam + stad (werkt altijd voor SAB's)
-    const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent('Stortrijders Eindhoven')}&inputtype=textquery&fields=place_id,rating,user_ratings_total,name&key=${API_KEY}`;
+    // DIT IS DE NIEUWE V1 ROUTE (Speciaal voor de 'New' API)
+    const url = `https://places.googleapis.com/v1/places/${PLACE_ID}?fields=rating,userRatingCount,displayName&key=${API_KEY}`;
     
-    const searchResponse = await fetch(searchUrl);
-    const searchData = await searchResponse.json();
+    const response = await fetch(url);
+    const data = await response.json();
 
-    if (searchData.status !== "OK" || !searchData.candidates[0]) {
-      return res.send(`Zoekfout: ${searchData.status}. Google kan 'Stortrijders Eindhoven' niet vinden via de API.`);
+    // De nieuwe API geeft fouten op een andere manier terug:
+    if (data.error) {
+      return res.send(`Google New API Fout: ${data.error.status}. Bericht: ${data.error.message}`);
     }
 
-    const bedrijf = searchData.candidates[0];
-    const rating = bedrijf.rating || 0;
-    const reviews = bedrijf.user_ratings_total || 0;
+    const rating = data.rating || 0;
+    const reviews = data.userRatingCount || 0;
+    const naam = data.displayName ? data.displayName.text : "Stortrijders";
 
-    // STAP 2: Toon de resultaten
     res.send(`
-      <div style="font-family: Arial, sans-serif; text-align: center; border: 2px solid #fbbc05; padding: 20px; border-radius: 15px; width: 220px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+      <div style="font-family: sans-serif; text-align: center; border: 2px solid #fbbc05; padding: 20px; border-radius: 15px; width: 220px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
         <div style="font-size: 32px; color: #fbbc05; font-weight: bold;">★ ${rating}</div>
         <div style="font-size: 14px; color: #333; margin: 10px 0;"><b>${reviews}</b> Google reviews</div>
-        <div style="font-size: 12px; color: #4285F4; font-weight: bold; text-transform: uppercase;">${bedrijf.name}</div>
-        <p style="font-size: 9px; color: #ccc; margin-top: 10px;">ID gevonden: ${bedrijf.place_id}</p>
+        <div style="font-size: 12px; color: #4285F4; font-weight: bold;">${naam.toUpperCase()}</div>
       </div>
     `);
   } catch (err) {
-    res.status(500).send("Server Fout: " + err.message);
+    res.status(500).send("Fout: " + err.message);
   }
 });
 

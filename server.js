@@ -2,34 +2,38 @@ const express = require('express');
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// De variabelen die je in Cloud Run hebt ingevuld
 const API_KEY = process.env.GOOGLE_API_KEY;
-const PLACE_ID = 'ChIJ4boUAQBDZIMR4LQpPG4yjSo';
+// Vul hier je exacte bedrijfsnaam in zoals deze op Google Maps staat:
+const SEARCH_QUERY = 'Stortrijders'; 
 
 app.get('/', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
 
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=rating,user_ratings_total,reviews&key=${API_KEY}`;
-    const response = await fetch(url);
-    const data = await response.json();
+    // STAP A: We zoeken eerst het bedrijf op basis van de naam
+    const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(SEARCH_QUERY)}&inputtype=textquery&fields=place_id,rating,user_ratings_total&key=${API_KEY}`;
+    
+    const searchResponse = await fetch(searchUrl);
+    const searchData = await searchResponse.json();
 
-    if (data.status !== "OK") {
-      return res.send(`Foutje bij Google: ${data.status}`);
+    if (!searchData.candidates || searchData.candidates.length === 0) {
+      return res.send("Bedrijf niet gevonden op Google. Controleer de naam.");
     }
 
-    const rating = data.result.rating || 0;
-    const total = data.result.user_ratings_total || 0;
-    
-    // De HTML die op je site komt
+    const result = searchData.candidates[0];
+    const rating = result.rating || 0;
+    const total = result.user_ratings_total || 0;
+
+    // De HTML voor je website
     res.send(`
-      <div style="font-family: Arial; border: 1px solid #eee; padding: 15px; border-radius: 10px; text-align: center;">
-        <h2 style="margin: 0; color: #fbbc05;">★ ${rating} / 5</h2>
-        <p style="margin: 5px 0 0; color: #666;">${total} Google reviews</p>
+      <div style="font-family: Arial; border: 1px solid #eee; padding: 15px; border-radius: 10px; text-align: center; max-width: 200px;">
+        <div style="color: #fbbc05; font-size: 20px; font-weight: bold;">★ ${rating}</div>
+        <div style="color: #666; font-size: 14px;">${total} Google reviews</div>
+        <div style="margin-top: 5px; font-size: 12px; color: #4285F4; font-weight: bold;">Stortrijders</div>
       </div>
     `);
   } catch (err) {
-    res.status(500).send("Server fout bij ophalen reviews.");
+    res.status(500).send("Fout bij ophalen gegevens.");
   }
 });
 

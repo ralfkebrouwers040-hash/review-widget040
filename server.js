@@ -3,35 +3,34 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 const API_KEY = process.env.GOOGLE_API_KEY;
-const MY_PLACE_ID = 'ChIJ4boUAQBDZIMR4LQpPG4yjSo'; 
 
 app.get('/', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
 
-  if (!API_KEY) return res.send("Fout: De API_KEY is leeg in Cloud Run variabelen.");
+  if (!API_KEY) return res.send("Fout: Geen API_KEY gevonden.");
 
   try {
-    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${MY_PLACE_ID}&fields=name,rating,user_ratings_total&key=${API_KEY}`;
+    // STAP 1: Zoek het bedrijf op naam + stad (werkt altijd voor SAB's)
+    const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent('Stortrijders Eindhoven')}&inputtype=textquery&fields=place_id,rating,user_ratings_total,name&key=${API_KEY}`;
     
-    const response = await fetch(url);
-    const data = await response.json();
+    const searchResponse = await fetch(searchUrl);
+    const searchData = await searchResponse.json();
 
-    // Als het misgaat, laten we PRECIES zien wat Google terugstuurt
-    if (data.status !== "OK") {
-      return res.send(`
-        <h3>Google API Fout</h3>
-        <p><b>Status:</b> ${data.status}</p>
-        <p><b>Bericht:</b> ${data.error_message || 'Geen extra info'}</p>
-        <p><i>Check: Staat 'Don't restrict key' aan bij je Credentials?</i></p>
-      `);
+    if (searchData.status !== "OK" || !searchData.candidates[0]) {
+      return res.send(`Zoekfout: ${searchData.status}. Google kan 'Stortrijders Eindhoven' niet vinden via de API.`);
     }
 
-    const bedrijf = data.result;
+    const bedrijf = searchData.candidates[0];
+    const rating = bedrijf.rating || 0;
+    const reviews = bedrijf.user_ratings_total || 0;
+
+    // STAP 2: Toon de resultaten
     res.send(`
-      <div style="font-family: Arial; text-align: center; border: 1px solid #eee; padding: 20px; border-radius: 15px; width: 220px;">
-        <div style="font-size: 32px; color: #fbbc05; font-weight: bold;">★ ${bedrijf.rating}</div>
-        <div style="font-size: 14px; color: #333; margin: 10px 0;"><b>${bedrijf.user_ratings_total}</b> Google reviews</div>
-        <div style="font-size: 12px; color: #4285F4; font-weight: bold;">STORTRIJDERS</div>
+      <div style="font-family: Arial, sans-serif; text-align: center; border: 2px solid #fbbc05; padding: 20px; border-radius: 15px; width: 220px; background: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+        <div style="font-size: 32px; color: #fbbc05; font-weight: bold;">★ ${rating}</div>
+        <div style="font-size: 14px; color: #333; margin: 10px 0;"><b>${reviews}</b> Google reviews</div>
+        <div style="font-size: 12px; color: #4285F4; font-weight: bold; text-transform: uppercase;">${bedrijf.name}</div>
+        <p style="font-size: 9px; color: #ccc; margin-top: 10px;">ID gevonden: ${bedrijf.place_id}</p>
       </div>
     `);
   } catch (err) {

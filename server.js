@@ -2,19 +2,18 @@ const express = require('express');
 const fetch = require('node-fetch');
 const app = express();
 
-// Google Cloud Run vertelt de server op welke poort hij moet luisteren via 'process.env.PORT'
+// Cloud Run vertelt ons de poort via process.env.PORT (meestal 8080)
 const PORT = process.env.PORT || 8080;
 
-// We halen de geheimen uit de instellingen, niet uit de tekst hier!
+// De geheimen komen uit de Cloud Run instellingen
 const API_KEY = process.env.GOOGLE_API_KEY;
 const PLACE_ID = 'ChIJ4boUAQBDZIMR4LQpPG4yjSo';
 
 app.get('/', async (req, res) => {
-  // Dit zorgt dat je eigen website de data mag ophalen (CORS)
-  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Origin', '*'); // Iedereen mag de data zien
 
   if (!API_KEY) {
-    return res.status(500).send("Fout: De GOOGLE_API_KEY is niet ingesteld in de Cloud Run variabelen.");
+    return res.status(500).send("Fout: GOOGLE_API_KEY niet gevonden in variabelen.");
   }
 
   try {
@@ -23,20 +22,17 @@ app.get('/', async (req, res) => {
     const data = await response.json();
 
     if (!data.result) {
-      return res.status(500).send("Google geeft geen reviews terug. Check je API key restricties.");
+      return res.status(500).send("Google API gaf een foutmelding.");
     }
 
-    // Een simpele weergave voor je website
     const rating = data.result.rating || 0;
-    const total = data.result.user_ratings_total || 0;
-    
-    res.send(`<h2>⭐ ${rating} (${total} reviews)</h2><p>Widget is succesvol verbonden!</p>`);
+    res.send(`<h2>⭐ ${rating} sterren</h2><p>Verbinding met Google is gelukt!</p>`);
   } catch (err) {
-    res.status(500).send("Er ging iets mis bij het ophalen van de data.");
+    res.status(500).send("Server fout.");
   }
 });
 
-// DIT IS HET BELANGRIJKSTE STUKJE:
+// DIT IS DE FIX: we luisteren op 0.0.0.0 in plaats van localhost
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`De server is wakker en luistert op poort ${PORT}`);
+  console.log(`Server luistert op poort ${PORT}`);
 });

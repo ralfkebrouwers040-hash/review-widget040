@@ -1,26 +1,27 @@
 // server.js
-require('dotenv').config(); // Laadt variabelen uit .env bestand (lokaal)
+require('dotenv').config(); 
 const express = require('express');
 const fetch = require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Haal de key en ID uit de omgeving (Environment Variables)
+// Geen hardcoded keys meer hier!
 const API_KEY = process.env.GOOGLE_API_KEY; 
 const PLACE_ID = process.env.PLACE_ID || 'ChIJ4boUAQBDZIMR4LQpPG4yjSo';
 
 app.get('/', async (req, res) => {
   if (!API_KEY) {
-    return res.status(500).send('Fout: API_KEY is niet ingesteld op de server.');
+    return res.status(500).send('Systeemfout: API_KEY ontbreekt in de server configuratie.');
   }
 
   try {
-    const response = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=rating,user_ratings_total,reviews&key=${API_KEY}`);
+    const url = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${PLACE_ID}&fields=rating,user_ratings_total,reviews&key=${API_KEY}`;
+    const response = await fetch(url);
     const data = await response.json();
 
     if (!data.result) {
-      return res.status(500).send('Geen reviews gevonden of ongeldige API Key');
+      return res.status(500).send('Google API fout: Check of de key en Place ID correct zijn.');
     }
 
     const rating = data.result.rating || 0;
@@ -45,11 +46,11 @@ app.get('/', async (req, res) => {
     res.send(html);
 
   } catch (err) {
-    console.error(err);
+    console.error("Fetch error:", err);
     res.status(500).send('Kon de reviews niet ophalen');
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server draait op poort ${PORT}`);
+  console.log(`Server draait veilig op poort ${PORT}`);
 });

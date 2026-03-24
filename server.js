@@ -3,40 +3,45 @@ const app = express();
 const PORT = process.env.PORT || 8080;
 
 const API_KEY = process.env.GOOGLE_API_KEY;
-// Vul hier je exacte bedrijfsnaam in zoals deze op Google Maps staat:
-const SEARCH_QUERY = 'Stortrijders'; 
 
 app.get('/', async (req, res) => {
   res.set('Access-Control-Allow-Origin', '*');
 
-  try {
-    // STAP A: We zoeken eerst het bedrijf op basis van de naam
-    const searchUrl = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${encodeURIComponent(SEARCH_QUERY)}&inputtype=textquery&fields=place_id,rating,user_ratings_total&key=${API_KEY}`;
-    
-    const searchResponse = await fetch(searchUrl);
-    const searchData = await searchResponse.json();
+  if (!API_KEY) return res.send("Fout: GOOGLE_API_KEY ontbreekt in Cloud Run variabelen.");
 
-    if (!searchData.candidates || searchData.candidates.length === 0) {
-      return res.send("Bedrijf niet gevonden op Google. Controleer de naam.");
+  try {
+    // We zoeken specifiek op jouw naam in Eindhoven
+    const zoekTerm = encodeURIComponent('Stortrijders Eindhoven');
+    const url = `https://maps.googleapis.com/maps/api/place/findplacefromtext/json?input=${zoekTerm}&inputtype=textquery&fields=rating,user_ratings_total,name,place_id&key=${API_KEY}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+
+    // Als Google 'ZERO_RESULTS' zegt, proberen we het nóg breder
+    if (data.status === "ZERO_RESULTS") {
+       return res.send("Google kan 'Stortrijders Eindhoven' niet vinden. Controleer of de bedrijfsnaam exact klopt op Maps.");
     }
 
-    const result = searchData.candidates[0];
-    const rating = result.rating || 0;
-    const total = result.user_ratings_total || 0;
+    if (data.status !== "OK") {
+      return res.send(`Google API melding: ${data.status}. (Check of 'Places API' op ENABLE staat in je Dashboard)`);
+    }
 
-    // De HTML voor je website
+    const bedrijf = data.candidates[0];
+    const rating = bedrijf.rating || 0;
+    const reviews = bedrijf.user_ratings_total || 0;
+
     res.send(`
-      <div style="font-family: Arial; border: 1px solid #eee; padding: 15px; border-radius: 10px; text-align: center; max-width: 200px;">
-        <div style="color: #fbbc05; font-size: 20px; font-weight: bold;">★ ${rating}</div>
-        <div style="color: #666; font-size: 14px;">${total} Google reviews</div>
-        <div style="margin-top: 5px; font-size: 12px; color: #4285F4; font-weight: bold;">Stortrijders</div>
+      <div style="font-family: sans-serif; text-align: center; border: 1px solid #fbc02d; padding: 15px; border-radius: 12px; width: 200px; background: #fff;">
+        <div style="font-size: 24px; color: #fbc02d; font-weight: bold;">★ ${rating}</div>
+        <div style="font-size: 14px; color: #333; margin: 5px 0;">${reviews} Google reviews</div>
+        <div style="font-size: 12px; color: #777; font-weight: bold;">${bedrijf.name}</div>
       </div>
     `);
   } catch (err) {
-    res.status(500).send("Fout bij ophalen gegevens.");
+    res.status(500).send("Fout bij het verbinden met de server.");
   }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Live op poort ${PORT}`);
+  console.log(`Server gestart op poort ${PORT}`);
 });

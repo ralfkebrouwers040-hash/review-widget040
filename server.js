@@ -56,15 +56,19 @@ app.get('/', async (req, res) => {
           body { font-family: sans-serif; margin: 0; padding: 10px; background: transparent; overflow: hidden; }
           .container { max-width: 1000px; margin: 0 auto; position: relative; padding: 0 40px; }
           
-          .reviews-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
-          .rating-value { font-size: 28px; font-weight: bold; margin-right: 10px; }
+          /* Border-bottom aangepast naar subtiel wit voor donkere achtergronden */
+          .reviews-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 15px; }
+          
+          /* Rating value is nu WIT */
+          .rating-value { font-size: 28px; font-weight: bold; margin-right: 10px; color: #ffffff; }
+          
           .stars { color: #fabb00; font-size: 18px; }
           .review-btn { background: #1a73e8; color: white; padding: 10px 18px; border-radius: 20px; text-decoration: none; font-size: 13px; font-weight: bold; }
 
           .carousel-container { overflow: hidden; width: 100%; }
           .carousel-viewport { display: flex; transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); gap: 15px; }
           
-          .review-card { min-width: calc(33.333% - 10px); background: white; padding: 20px; border-radius: 12px; border: 1px solid #e0e0e0; box-sizing: border-box; height: 220px; }
+          .review-card { min-width: calc(33.333% - 10px); background: white; padding: 15px; border-radius: 12px; border: 1px solid #e0e0e0; box-sizing: border-box; height: 200px; }
           @media (max-width: 800px) { .review-card { min-width: 100%; } }
 
           .card-header { display: flex; align-items: center; margin-bottom: 12px; }
@@ -73,7 +77,7 @@ app.get('/', async (req, res) => {
           .avatar-initial { width: 100%; height: 100%; border-radius: 50%; background: #4285f4; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; }
           .google-g { position: absolute; bottom: -2px; right: -2px; width: 16px; background: white; border-radius: 50%; }
           
-          .author-name { font-size: 14px; font-weight: bold; }
+          .author-name { font-size: 14px; font-weight: bold; color: #333; }
           .verified-vinkje { color: #1a73e8; font-size: 12px; margin-left: 4px; }
           .publish-time { font-size: 11px; color: #777; }
           .review-text { font-size: 13px; color: #444; line-height: 1.5; }
@@ -88,7 +92,7 @@ app.get('/', async (req, res) => {
             <div>
               <span class="rating-value">${rating}</span>
               <span class="stars">★★★★★</span>
-              <span style="color:#666; font-size:14px;">(${reviewsCount})</span>
+              <span style="color:#ffffff; font-size:14px;">(${reviewsCount})</span>
             </div>
             <a href="https://search.google.com/local/writereview?placeid=${PLACE_ID}" target="_blank" class="review-btn">Review us on Google</a>
           </div>
@@ -108,12 +112,11 @@ app.get('/', async (req, res) => {
           const viewport = document.getElementById('viewport');
           
           function move(direction) {
-            const cardWidth = document.querySelector('.review-card').offsetWidth + 15; // Breedte + gap
+            const cardWidth = document.querySelector('.review-card').offsetWidth + 15; 
             const maxScroll = viewport.scrollWidth - viewport.offsetWidth;
             
             position += (direction * -cardWidth);
             
-            // Loop-back logica
             if (position < -maxScroll) position = 0;
             if (position > 0) position = -maxScroll;
             
